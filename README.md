@@ -75,13 +75,20 @@ hiver-challenge/
 
 ```bash
 git clone <your-repo-url>
-cd hiver-challenge
-pip install -r requirements.txt
+cd hiver-email-ai
+python -m pip install -r requirements.txt
 ```
 
 ### 3. Run the Full Pipeline
 
 ```bash
+python scripts/run_pipeline.py
+```
+
+If you are using PowerShell, the same commands work from the repository root. If you are already in another folder, use `Set-Location` first:
+
+```powershell
+Set-Location C:\path\to\hiver-email-ai
 python scripts/run_pipeline.py
 ```
 

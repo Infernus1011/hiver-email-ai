@@ -5,6 +5,7 @@ Creates realistic customer support email pairs (incoming -> reply).
 """
 import json
 import random
+import re
 from dataclasses import dataclass, asdict
 from typing import List
 
@@ -127,6 +128,17 @@ CATEGORIES = list(TEMPLATES.keys())
 URGENCIES = ["low", "medium", "high", "critical"]
 TIERS = ["free", "pro", "enterprise"]
 
+
+def format_template(template: str, variables: dict) -> str:
+    placeholders = re.findall(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}", template)
+    safe_variables = {
+        placeholder: variables.get(placeholder, f"<{placeholder}>")
+        for placeholder in placeholders
+        if placeholder not in variables
+    }
+    return template.format(**variables, **safe_variables)
+
+
 def generate_email_pair(idx: int) -> EmailPair:
     category = random.choice(CATEGORIES)
     templates = TEMPLATES[category]
@@ -159,6 +171,7 @@ def generate_email_pair(idx: int) -> EmailPair:
         "email2": random_email(),
         "old_plan": random.choice(["Free", "Pro"]),
         "new_plan": random.choice(["Pro", "Business", "Enterprise"]),
+        "email": random_email(),
         "topic": random.choice(["pricing", "features", "integrations", "security", "compliance"]),
         "ticket": f"#{random.randint(10000, 99999)}",
         "status": random.choice(["in progress", "under review", "waiting for your reply", "escalated"]),
@@ -170,8 +183,8 @@ def generate_email_pair(idx: int) -> EmailPair:
         ]),
     }
     
-    incoming = incoming_template.format(**variables)
-    expected_reply = reply_template.format(**variables)
+    incoming = format_template(incoming_template, variables)
+    expected_reply = format_template(reply_template, variables)
     
     return EmailPair(
         id=f"email_{idx:05d}",
