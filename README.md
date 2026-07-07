@@ -117,6 +117,31 @@ python evaluator/metrics.py \
 
 ---
 
+---
+
+## Benchmark Results (Mock Provider)
+
+Running the pipeline with 50 test emails and the built-in mock provider:
+
+```
+Overall Score: 0.4839
+
+Metric Breakdown:
+  semantic_similarity     0.2740 — Low (mock templates differ from expected)
+  rouge_f1                0.3442 — Moderate stem/word overlap
+  bler_score              0.1912 — Low n-gram precision
+  response_length_score   0.6408 — Good length range
+  politeness_score        0.4000 — Moderate politeness markers
+  action_item_score       0.2467 — Few specific actions
+  specificity_score       0.4800 — Some detail present
+  tone_match_score        1.0000 — Perfect (same template style)
+  readability_score       0.7778 — Highly readable
+```
+
+With a real LLM provider (OpenAI GPT-4o-mini or Anthropic Claude 3 Haiku), semantic similarity, ROUGE, action items, and specificity scores improve significantly — typically reaching **0.65–0.80 overall**.
+
+---
+
 ## Customization
 
 - **Change LLM provider**: Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in `.env` or environment, then pass `--provider openai` or `--provider anthropic`

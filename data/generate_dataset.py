@@ -7,9 +7,38 @@ import json
 import random
 from dataclasses import dataclass, asdict
 from typing import List
-from faker import Faker
 
-fake = Faker()
+FIRST_NAMES = [
+    "Alice", "Bob", "Charlie", "Diana", "Edward", "Fiona", "George",
+    "Hannah", "Ivan", "Julia", "Kevin", "Laura", "Michael", "Nina",
+    "Oliver", "Patricia", "Quinn", "Rachel", "Samuel", "Tara",
+    "Uma", "Victor", "Wendy", "Xavier", "Yara", "Zach",
+    "Abigail", "Benjamin", "Claire", "Daniel", "Emma", "Frank",
+]
+
+LAST_NAMES = [
+    "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia",
+    "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez",
+    "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore",
+    "Jackson", "Martin", "Lee", "Perez", "Thompson", "White",
+]
+
+DOMAINS = ["gmail.com", "outlook.com", "company.com", "hotmail.com", "yahoo.com", "protonmail.com"]
+
+MONTHS = ["January", "February", "March", "April", "May", "June",
+          "July", "August", "September", "October", "November", "December"]
+
+def random_name():
+    return random.choice(FIRST_NAMES)
+
+def random_email():
+    return f"{random_name().lower()}.{random.choice(LAST_NAMES).lower()}{random.randint(1,99)}@{random.choice(DOMAINS)}"
+
+def random_date():
+    month = random.choice(MONTHS)
+    day = random.randint(1, 28)
+    year = random.randint(2023, 2024)
+    return f"{month} {day}, {year}"
 
 @dataclass
 class EmailPair:
@@ -107,9 +136,9 @@ def generate_email_pair(idx: int) -> EmailPair:
     
     # Fill in template variables
     variables = {
-        "name": fake.first_name(),
+        "name": random_name(),
         "amount": f"${random.randint(10, 500)}.{random.randint(10, 99):02d}",
-        "date": fake.date_this_year().strftime("%B %d, %Y"),
+        "date": random_date(),
         "service": random.choice(["Premium Plan", "Add-on Storage", "API Access", "Priority Support", "Custom Domain"]),
         "plan": random.choice(["Monthly Pro", "Annual Business", "Enterprise"]),
         "error": random.choice(["Invalid credentials", "Session expired", "Rate limit exceeded", "Network error", "Permission denied"]),
@@ -124,10 +153,10 @@ def generate_email_pair(idx: int) -> EmailPair:
         "action_taken": random.choice(["cleared the cache", "reset your session", "updated your permissions", "refreshed the connection"]),
         "benefit": random.choice(["save time", "automate workflows", "improve team collaboration", "get better insights"]),
         "use_case": random.choice(["client onboarding", "weekly reporting", "team collaboration", "data analysis"]),
-        "old_email": fake.email(),
-        "new_email": fake.email(),
-        "email1": fake.email(),
-        "email2": fake.email(),
+        "old_email": random_email(),
+        "new_email": random_email(),
+        "email1": random_email(),
+        "email2": random_email(),
         "old_plan": random.choice(["Free", "Pro"]),
         "new_plan": random.choice(["Pro", "Business", "Enterprise"]),
         "topic": random.choice(["pricing", "features", "integrations", "security", "compliance"]),
@@ -142,7 +171,7 @@ def generate_email_pair(idx: int) -> EmailPair:
     }
     
     incoming = incoming_template.format(**variables)
-    expected_reply = reply_template.format(**variables, ticket=variables["ticket"])
+    expected_reply = reply_template.format(**variables)
     
     return EmailPair(
         id=f"email_{idx:05d}",
