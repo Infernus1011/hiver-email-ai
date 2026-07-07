@@ -1,0 +1,30 @@
+# Core dependencies
+openai>=1.30.0
+anthropic>=0.25.0
+anthropic-sdk>=0.25.0
+
+# ML/NLP evaluation
+sentence-transformers>=2.7.0
+scikit-learn>=1.4.0
+numpy>=1.24.0
+scipy>=1.10.0
+rouge-score>=0.1.2
+nltk>=3.8.1
+bert-score>=0.3.13
+
+# Utilities
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+tqdm>=4.66.0
+pandas>=2.1.0
+numpy>=1.24.0
+requests>=2.31.0
+tqdm>=4.66.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Linting/Type checking
+ruff>=0.3.0
+mypy>=1.8.0
