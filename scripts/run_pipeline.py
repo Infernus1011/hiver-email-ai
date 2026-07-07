@@ -106,8 +106,8 @@ def main():
         "overall_score": round(weighted_avg, 4),
         "average_metrics": avg_metrics,
         "total_evaluated": len(per_response),
-        "per_response": per_response[:5],
-        "note": "Full per_response list truncated to first 5. See full output in output/evaluation_results.json"
+        "per_response": per_response,
+        "note": "Includes all evaluated email-response pairs."
     }
     
     eval_path = os.path.join(output_base, "evaluation_results.json")

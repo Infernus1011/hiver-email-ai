@@ -2,39 +2,70 @@
 
 ## Overview
 
-This project addresses the Hiver Open Challenge: building a Gen-AI system that generates professional email replies for customer support and evaluating their quality through automated metrics.
+This project builds a Gen-AI email suggested-response system for customer support. It takes an incoming email, generates a suggested reply using a generative approach, and evaluates that reply against a reference response using a multi-metric scoring system.
 
 The system is structured as an end-to-end pipeline:
 
-1. **Dataset Generation** — Creates realistic synthetic customer support email pairs (incoming queries + expected replies) across 5 categories
-2. **AI Response Generator** — Uses LLMs (OpenAI GPT-4o-mini, Anthropic Claude 3 Haiku, or a built-in mock provider) to draft replies given an email context
-3. **Evaluation System** — Scores each generated response on 9 distinct metrics and produces a per-response + overall quality score
+1. **Dataset Generation** — Creates a synthetic but realistic dataset of incoming emails paired with reference replies across 5 support categories.
+2. **Gen-AI Response Generator** — Uses a generative approach that can run with a mock provider by default and can also use OpenAI or Anthropic if API keys are available.
+3. **Accuracy and Evaluation System** — Scores each generated response using semantic, structural, and quality-oriented metrics, then reports per-response and overall scores.
 
 ---
 
-## Approach
+## Dataset: where it came from and why it is representative
 
-### Why synthetic data?
+The dataset is synthetic and hand-authored in this repository. I created it to avoid relying on private support data while still covering realistic support scenarios such as billing disputes, technical issues, feature requests, account changes, and general questions.
 
-Real customer support data is proprietary and legally sensitive. By generating synthetic email pairs from templates with randomized parameters (names, dates, amounts, error messages, etc.), we can create a realistic validation set that captures the variety of support scenarios without exposing private data.
+Why this is a reasonable proxy for the challenge:
+- It contains paired examples of incoming customer email and expected reply.
+- It covers multiple customer support categories and urgency/tier combinations.
+- It includes a mix of actionable, specific, and conversational replies, which is useful for evaluating whether generated responses are helpful rather than merely fluent.
 
-### Why these metrics?
+The data is generated from templates in [data/generate_dataset.py](data/generate_dataset.py), which creates varied names, dates, charges, error messages, plans, and ticket-like details so the pipeline has enough diversity to test generation and evaluation.
 
-The evaluation system measures response quality across multiple dimensions:
+---
 
-| Metric | Weight | What it measures |
-|---|---|---|
-| **Semantic Similarity** | 25% | Cosine similarity of sentence embeddings (all-MiniLM-L6-v2) — captures whether the reply is on-topic even with different wording |
-| **ROUGE-F1** | 15% | Longest common subsequence recall/precision — measures structural overlap with the expected reply |
-| **Response Length** | 10% | Whether the reply is an appropriate length (50–200 words is ideal) |
-| **Politeness** | 10% | Presence of polite markers (please, thank you, appreciate, sorry, etc.) |
-| **Action Items** | 10% | Whether the reply includes specific actions (ticket numbers, timeframes, steps taken) |
-| **Specificity** | 10% | Use of concrete details vs. vague language ($ amounts, version numbers, dates) |
-| **Tone Match** | 10% | Consistency of formality level between generated and expected response |
-| **Readability** | 5% | Flesch-Kincaid-style readability score — ensures replies are easy to understand |
-| **BLEU Score** | 5% | N-gram precision with brevity penalty — measures lexical similarity |
+## Generation approach
 
-The weighted composite score gives more weight to semantic alignment and structural overlap (40% combined for similarity + ROUGE) because a good reply should convey the right information, not just sound polite. Quality heuristics (politeness, specificity, action items) each get 10% to reward well-crafted replies that go beyond generic templates.
+The response generator is a lightweight generative system rather than a classical classifier. It uses a prompt-style approach with a fallback mock provider and optional few-shot examples drawn from the generated dataset.
+
+Why this approach was chosen:
+- It is simple to run end to end without needing heavy fine-tuning.
+- It is directly aligned with the challenge’s requirement for a Gen-AI response generator.
+- It can work offline with the mock provider, while still supporting OpenAI or Anthropic when credentials are present.
+
+The generator is implemented in [generator/response_generator.py](generator/response_generator.py). In the default run, the mock provider is used so the project remains runnable even without API keys.
+
+---
+
+## Accuracy and evaluation strategy
+
+A strict exact-match metric would be too brittle for this task because good support replies can be phrased differently while still being correct. Instead, the evaluation system uses a weighted composite of multiple metrics that capture different aspects of response quality.
+
+### Metrics used
+
+| Metric | Weight | Why it matters |
+|---|---:|---|
+| **Semantic Similarity** | 25% | Measures whether the generated reply is meaningfully aligned with the reference reply. |
+| **ROUGE-F1** | 15% | Captures structural overlap and shared phrasing. |
+| **Response Length** | 10% | Rewards replies that are neither too short nor overly verbose. |
+| **Politeness** | 10% | Encourages courteous support tone. |
+| **Action Items** | 10% | Rewards replies that contain concrete next steps or commitments. |
+| **Specificity** | 10% | Rewards detailed, concrete replies rather than generic ones. |
+| **Tone Match** | 10% | Checks whether the tone is similar to the reference reply. |
+| **Readability** | 5% | Encourages clear and easy-to-understand responses. |
+| **BLEU-style score** | 5% | Adds a lexical similarity signal without relying on exact match. |
+
+This makes the evaluation system more faithful to real support quality than a single metric would be. A response can be polite and readable but still miss action items; conversely, it can include action items but be too vague. The composite score balances these dimensions.
+
+### How the evaluation is reported
+
+The system outputs:
+- a per-response score for each generated reply,
+- an overall average score across the dataset,
+- and a breakdown of the individual metrics used to build the aggregate score.
+
+The evaluation logic lives in [evaluator/metrics.py](evaluator/metrics.py).
 
 ---
 
@@ -63,6 +94,72 @@ hiver-challenge/
 ---
 
 ## How to Run
+
+### 1. Prerequisites
+
+- Python 3.10+
+- Optional: OpenAI or Anthropic API keys if you want to use real LLM providers instead of the built-in mock provider.
+
+### 2. Setup
+
+```bash
+git clone https://github.com/Infernus1011/hiver-email-ai.git
+cd hiver-email-ai
+python -m pip install -r requirements.txt
+```
+
+### 3. Run the Full Pipeline
+
+```bash
+python scripts/run_pipeline.py
+```
+
+This will:
+1. Generate 50 synthetic email pairs
+2. Generate AI responses using the mock provider by default
+3. Evaluate response quality
+4. Save outputs to [output](output)
+
+### 4. Run Components Individually
+
+**Generate a larger dataset:**
+```bash
+python data/generate_dataset.py --count 500 --output data/email_dataset.jsonl
+```
+
+**Generate responses using a provider:**
+```bash
+python generator/response_generator.py --input data/email_dataset_test.jsonl --output output/responses.jsonl --provider mock
+```
+
+**Evaluate generated responses:**
+```bash
+python evaluator/metrics.py --generated output/responses.jsonl --expected data/email_dataset_test.jsonl --output output/evaluation_results.json
+```
+
+### 5. Quick validation
+
+```bash
+python -m unittest -q tests.test_generate_dataset tests.test_response_generator
+```
+
+---
+
+## AI tools usage
+
+This project was built and iterated with AI assistance for code generation, debugging, and test scaffolding. The core repository structure, the dataset generator, the evaluation metrics, and the README were developed with AI help while keeping the pipeline runnable end to end.
+
+---
+
+## Submission readiness summary
+
+This repository is ready to submit for the challenge because it includes:
+- a runnable end-to-end pipeline,
+- a dataset generator and documented dataset design,
+- a Gen-AI-style response generator,
+- and an evaluation system with per-response and overall scoring.
+
+The main trade-off is that the dataset is synthetic rather than sourced from private support logs, but that is an intentional and transparent choice that keeps the project reproducible and privacy-safe.
 
 ### 1. Prerequisites
 

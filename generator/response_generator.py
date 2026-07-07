@@ -185,7 +185,7 @@ Write a professional reply:"""
 
 class MockProvider(LLMProvider):
     """Fallback provider for testing without API keys"""
-    def __init__(self):
+    def __init__(self, dataset_path: Optional[str] = None):
         self.templates = {
             "billing": "Hi {name}, I've looked into your billing question about {topic}. I've {action} and you'll see the update in 3-5 business days. Let me know if you need anything else!",
             "technical": "Hi {name}, I'm sorry you're experiencing this issue. I've escalated this to our engineering team (ticket #{ticket}). In the meantime, you can {workaround}. We'll update you within 24 hours.",
@@ -194,6 +194,27 @@ class MockProvider(LLMProvider):
             "general": "Hi {name}, happy to help! {answer}. Let me know if you have any follow-up questions.",
         }
     
+        self.dataset_path = dataset_path
+        self.few_shot_examples = []
+        self._load_examples()
+
+    def _load_examples(self):
+        if not self.dataset_path or not os.path.exists(self.dataset_path):
+            return
+        with open(self.dataset_path, "r", encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                try:
+                    data = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if data.get("incoming") and data.get("expected_reply"):
+                    self.few_shot_examples.append({
+                        "incoming": data["incoming"],
+                        "expected_reply": data["expected_reply"],
+                    })
+
     def is_available(self) -> bool:
         return True
     
@@ -204,6 +225,13 @@ class MockProvider(LLMProvider):
         
         template = self.templates.get(context.category, self.templates["general"])
         
+        example_context = ""
+        if self.few_shot_examples:
+            example_context = "\n".join(
+                f"Incoming: {item['incoming']}\nReply: {item['expected_reply']}"
+                for item in self.few_shot_examples[:2]
+            )
+
         # Extract name from incoming email
         name_match = re.search(r'(Hi|Hello|Dear)\s+(\w+)', context.incoming)
         name = name_match.group(2) if name_match else "there"
@@ -219,6 +247,8 @@ class MockProvider(LLMProvider):
             timeframe="Q2 2024",
             answer="I've addressed your question."
         )
+        if example_context:
+            filled = f"Examples:\n{example_context}\n\nCurrent request:\n{context.incoming}\n\nReply:\n{filled}"
         
         latency = (time.time() - start) * 1000
         
@@ -231,13 +261,14 @@ class MockProvider(LLMProvider):
         )
 
 class ResponseGenerator:
-    def __init__(self, preferred_provider: str = "openai"):
+    def __init__(self, preferred_provider: str = "openai", dataset_path: Optional[str] = None):
         self.providers: List[LLMProvider] = [
             OpenAIProvider(),
             AnthropicProvider(),
-            MockProvider(),
+            MockProvider(dataset_path=dataset_path),
         ]
         self.preferred = preferred_provider
+        self.few_shot_examples = self.providers[-1].few_shot_examples if self.providers else []
     
     def generate(self, context: EmailContext) -> GeneratedResponse:
         # Try preferred provider first
